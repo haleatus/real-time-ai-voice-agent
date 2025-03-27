@@ -182,7 +182,13 @@ const Agent = ({
   return (
     <>
       <div className="call-view">
-        <div className="card-interviewer">
+        <div
+          className={`card-interviewer ${
+            isSpeaking
+              ? "border-2 transition-all duration-300 border-purple-300/60"
+              : ""
+          }`}
+        >
           <div className="avatar">
             <Image
               src="/ai-avatar.png"
@@ -191,7 +197,6 @@ const Agent = ({
               height={54}
               className="object-cover"
             />
-            {isSpeaking && <span className="animate-speak" />}
           </div>
           <h3>AI Interviewer</h3>
         </div>
