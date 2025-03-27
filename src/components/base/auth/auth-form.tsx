@@ -17,9 +17,14 @@ import { useRouter } from "next/navigation";
 import FormField from "../form-field";
 
 // Firebase imports
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { auth } from "@/firebase/client";
-import { signUp } from "@/lib/actions/auth.action";
+
+// action imports
+import { signIn, signUp } from "@/lib/actions/auth.action";
 
 // Zod schema for form validation
 const authFormSchema = (type: FormType) => {
@@ -55,7 +60,37 @@ const AuthForm = ({ type }: { type: FormType }) => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       if (type === "sign-in") {
-        console.log("Sign-in values", values);
+        const { email, password } = values;
+
+        // Sign in the user
+        const userCredentials = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // Get the user's ID token
+        const idToken = await userCredentials.user.getIdToken();
+
+        // Check if the sign in was successful
+        if (!idToken) {
+          toast.error("Sign in failed");
+          return;
+        }
+
+        // Sign in the user
+        await signIn({
+          email,
+          idToken,
+        });
+
+        // Show a success message
+        toast.success(
+          `You have successfully signed in. Welcome, ${userCredentials.user.email}!`
+        );
+
+        // Redirect the user
+        router.push("/");
       } else {
         const { name, email, password } = values;
 
@@ -79,17 +114,13 @@ const AuthForm = ({ type }: { type: FormType }) => {
           toast.error(result?.message);
           return;
         }
+
+        // Show a success message
+        toast.success(`You have successfully signed up. Welcome, ${name}!`);
+
+        // Redirect the user
+        router.push("/sign-in");
       }
-
-      // Show a success message
-      toast.success(
-        `You have successfully ${
-          type === "sign-in" ? "signed in" : "signed up"
-        }`
-      );
-
-      // Redirect the user
-      router.push(isSignIn ? "/" : "/sign-in");
     } catch (error) {
       // Log the error
       console.log(error);
