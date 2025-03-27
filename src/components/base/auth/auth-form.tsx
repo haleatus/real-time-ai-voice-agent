@@ -16,6 +16,16 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import FormField from "../form-field";
 
+// Firebase imports
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+import { auth } from "@/firebase/client";
+
+// action imports
+import { signIn, signUp } from "@/lib/actions/auth.action";
+
 // Zod schema for form validation
 const authFormSchema = (type: FormType) => {
   return z.object({
@@ -47,25 +57,79 @@ const AuthForm = ({ type }: { type: FormType }) => {
   });
 
   // 2. Define a submit handler.
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       if (type === "sign-in") {
-        console.log("Sign-in values", values);
+        const { email, password } = values;
+
+        // Sign in the user
+        const userCredentials = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // Get the user's ID token
+        const idToken = await userCredentials.user.getIdToken();
+
+        // Check if the sign in was successful
+        if (!idToken) {
+          toast.error("Sign in failed");
+          return;
+        }
+
+        // Sign in the user
+        await signIn({
+          email,
+          idToken,
+        });
+
+        // Show a success message
+        toast.success(
+          `You have successfully signed in. Welcome, ${userCredentials.user.email}!`
+        );
+
+        // Redirect the user
+        router.push("/");
       } else {
-        console.log("Sign-up values", values);
+        const { name, email, password } = values;
+
+        // Create a new user
+        const userCredentials = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // Sign up the user
+        const result = await signUp({
+          uid: userCredentials.user.uid,
+          name: name!,
+          email,
+          password,
+        });
+
+        // Check if the sign up was successful
+        if (!result?.success) {
+          toast.error(result?.message);
+          return;
+        }
+
+        // Show a success message
+        toast.success(`You have successfully signed up. Welcome, ${name}!`);
+
+        // Redirect the user
+        router.push("/sign-in");
       }
-      toast.success(
-        `You have successfully ${
-          type === "sign-in" ? "signed in" : "signed up"
-        }`
-      );
-      router.push(isSignIn ? "/" : "/sign-in");
     } catch (error) {
+      // Log the error
       console.log(error);
+      // Show an error message
       toast.error(`There was an error: ${error}`);
     }
   }
 
+  // Check the form type
   const isSignIn = type === "sign-in";
 
   return (
