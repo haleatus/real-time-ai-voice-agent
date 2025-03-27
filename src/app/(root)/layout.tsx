@@ -9,6 +9,9 @@ import React, { ReactNode } from "react";
 // Action imports
 import { isAuthenticated } from "@/lib/actions/auth.action";
 
+// Component imports
+import { LogoutButton } from "@/components/base/auth/logout-button";
+
 /**
  * RootLayout component
  * @param children - Children components
@@ -24,11 +27,12 @@ const RootLayout = async ({ children }: { children: ReactNode }) => {
   // Return the root layout
   return (
     <main className="root-layout">
-      <nav>
+      <nav className="flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logo.svg" alt="logo" width={32} height={32} />
           <h2>Prepme</h2>
         </Link>
+        <LogoutButton />
       </nav>
       {children}
     </main>
