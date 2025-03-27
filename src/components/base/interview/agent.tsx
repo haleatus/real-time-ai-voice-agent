@@ -55,6 +55,8 @@ const Agent = ({
 
   const [lastMessage, setLastMessage] = useState<string>("");
 
+  const workflowId = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!;
+
   // useEffect hook to handle event listeners
   useEffect(() => {
     // Event listeners
@@ -145,7 +147,7 @@ const Agent = ({
     setCallStatus(CallStatus.CONNECTING);
 
     if (type === "generate") {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
+      await vapi.start(workflowId, {
         variableValues: {
           username: userName,
           userid: userId,

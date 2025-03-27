@@ -33,6 +33,7 @@ export async function getLatestInterviews(
 ): Promise<Interview[] | null> {
   const { userId, limit = 20 } = params;
 
+  // Get the latest interviews
   const interviews = await db
     .collection("interviews")
     .orderBy("createdAt", "desc")
