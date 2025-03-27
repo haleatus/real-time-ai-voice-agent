@@ -22,7 +22,7 @@ export default function Layout({
     <html lang="en" className="dark">
       <body className={`${monaSans.variable} antialiased pattern`}>
         {children}
-        <Toaster />
+        <Toaster richColors />
       </body>
     </html>
   );
