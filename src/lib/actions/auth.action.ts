@@ -36,6 +36,11 @@ export async function signUp(params: SignUpParams) {
       name,
       email,
     });
+
+    return {
+      success: true,
+      message: "User created successfully.",
+    };
   } catch (error: any) {
     // Log the error
     console.error("Error creating a user", error);
@@ -79,6 +84,11 @@ export async function signIn(params: SignInParams) {
 
     // If the user exists, set the session cookie
     await setSessionCookie(idToken);
+
+    return {
+      success: true,
+      message: "User signed in successfully.",
+    };
   } catch (error: any) {
     // Log the error
     console.error("Error signing in a user", error);
