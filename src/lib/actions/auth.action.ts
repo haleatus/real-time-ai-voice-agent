@@ -43,7 +43,7 @@ export async function signUp(params: SignUpParams) {
     };
   } catch (error: any) {
     // Log the error
-    console.error("Error creating a user", error);
+    // console.error("Error creating a user", error);
 
     // Firebase error handling
     if (error.code === "auth/email-already-exists") {
@@ -91,7 +91,8 @@ export async function signIn(params: SignInParams) {
     };
   } catch (error: any) {
     // Log the error
-    console.error("Error signing in a user", error);
+    console.log("Error signing in a user", error);
+    // console.error("Error signing in a user", error);
     // Return an error message
     return {
       success: false,
