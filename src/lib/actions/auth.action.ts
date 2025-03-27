@@ -13,7 +13,7 @@ const ONE_WEEK = 60 * 60 * 24 * 7;
 /**
  * Sign up action
  * @param params
- * @returns {Promise} Promise object represents the result of the sign up
+ * @returns Sign up result
  */
 export async function signUp(params: SignUpParams) {
   // Destruct the parameters
@@ -64,7 +64,7 @@ export async function signUp(params: SignUpParams) {
 /**
  * Sign in action
  * @param params
- * @returns {Promise} Promise object represents the result of the sign in
+ * @returns Sign in result
  */
 export async function signIn(params: SignInParams) {
   // Destruct the parameters
@@ -103,7 +103,7 @@ export async function signIn(params: SignInParams) {
 /**
  * setSessionCookie action
  * @param params
- * @returns
+ * @returns Set session cookie
  */
 export async function setSessionCookie(idToken: string) {
   // store the cookie
@@ -122,4 +122,56 @@ export async function setSessionCookie(idToken: string) {
     path: "/",
     sameSite: "lax",
   });
+}
+
+/**
+ * Sign out action
+ * @returns {Promise} Promise object represents the current user
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  const cookieStore = await cookies();
+
+  // Get the session cookie
+  const sessionCookie = cookieStore.get("session")?.value;
+
+  // If the session cookie does not exist, return null
+  if (!sessionCookie) {
+    return null;
+  }
+
+  try {
+    // Verify the session cookie
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+
+    // Get the user record
+    const userRecord = await db
+      .collection("users")
+      .doc(decodedClaims.uid)
+      .get();
+
+    // If the user record does not exist, return null
+    if (!userRecord.exists) {
+      return null;
+    }
+
+    // Return the user data
+    return {
+      ...userRecord.data(),
+      id: userRecord.id,
+    } as User;
+  } catch (error) {
+    // Log the error
+    console.log(error);
+    // Return null
+    return null;
+  }
+}
+
+/**
+ * Sign out action
+ * @returns Returns true or false if the user is authenticated
+ */
+export async function isAuthenticated() {
+  const user = await getCurrentUser();
+  return !!user; // return true if user is authenticated and false if not (truthy and falsy values)
 }
