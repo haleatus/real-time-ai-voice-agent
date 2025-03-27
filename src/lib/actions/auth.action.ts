@@ -169,10 +169,35 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 /**
- * Sign out action
+ * isAuthenticated action
  * @returns Returns true or false if the user is authenticated
  */
 export async function isAuthenticated() {
   const user = await getCurrentUser();
   return !!user; // return true if user is authenticated and false if not (truthy and falsy values)
+}
+
+/**
+ * Sign out action
+ * @returns Sign out result
+ */
+export async function signOut() {
+  try {
+    // Get the cookie store
+    const cookieStore = await cookies();
+
+    // Clear the session cookie
+    cookieStore.delete("session");
+
+    return {
+      success: true,
+      message: "User signed out successfully.",
+    };
+  } catch (error: any) {
+    console.log("Error signing out", error);
+    return {
+      success: false,
+      message: "Failed to sign out.",
+    };
+  }
 }
