@@ -1,18 +1,19 @@
 "use client";
 
 // React imports
-import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 
+// VAPI SDK imports
+import { cn } from "@/lib/utils";
+import { vapi } from "@/lib/vapi.sdk";
+
+// Constants imports
 import { interviewer } from "@/constants";
 
 // Actions imports
 import { createFeedback } from "@/lib/actions/feedback.action";
-
-// VAPI SDK imports
-import { vapi } from "@/lib/vapi.sdk";
 import { toast } from "sonner";
 
 // enum CallStatus
@@ -21,7 +22,6 @@ enum CallStatus {
   CONNECTING = "CONNECTING",
   ACTIVE = "ACTIVE",
   FINISHED = "FINISHED",
-  ANALYZING = "ANALYZING",
 }
 
 // SavedMessage interface
@@ -51,15 +51,13 @@ const Agent = ({
   const router = useRouter();
 
   // State variables for checking call status, speaking status, and messages
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastMessage, setLastMessage] = useState<string>("");
-  const [animatedDots, setAnimatedDots] = useState(".");
 
-  const workflowId = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!;
+  const [isLoading, setIsLoading] = useState(false);
+  const [animatedDots, setAnimatedDots] = useState(".");
 
   // Animate dots effect
   useEffect(() => {
@@ -80,10 +78,8 @@ const Agent = ({
 
   // useEffect hook to handle event listeners
   useEffect(() => {
-    // Event listeners
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
-      setIsLoading(false);
     };
 
     const onCallEnd = () => {
@@ -109,10 +105,6 @@ const Agent = ({
 
     const onError = (error: Error) => {
       console.log("Error:", error);
-      setIsLoading(false);
-      toast.error("Call initialization failed", {
-        description: error.message,
-      });
     };
 
     // Add event listeners
@@ -143,7 +135,7 @@ const Agent = ({
     // Function to handle generating feedback
     const handleGenerateFeedback = async (messages: SavedMessage[]) => {
       console.log("handleGenerateFeedback");
-      setCallStatus(CallStatus.ANALYZING);
+
       setIsLoading(true);
 
       toast.info("Analyzing interview", {
@@ -151,45 +143,35 @@ const Agent = ({
         duration: 3000,
       });
 
-      try {
-        const { success, feedbackId: id } = await createFeedback({
-          interviewId: interviewId!,
-          userId: userId!,
-          transcript: messages,
-          feedbackId,
-        });
+      const { success, feedbackId: id } = await createFeedback({
+        interviewId: interviewId!,
+        userId: userId!,
+        transcript: messages,
+        feedbackId,
+      });
 
-        if (success && id) {
-          toast.success("Interview processed successfully!", {
-            description: "Redirecting to feedback...",
-            duration: 2000,
-          });
-          setTimeout(
-            () => router.push(`/interview/${interviewId}/feedback`),
-            2000
-          );
-        } else {
-          throw new Error("Feedback creation failed");
-        }
-      } catch (error) {
-        console.log("Error:", error);
-        toast.error("Error processing interview", {
-          description: "Redirecting to home...",
+      if (success && id) {
+        setIsLoading(false);
+        toast.success("Interview processed successfully!", {
+          description: "Redirecting to feedback...",
           duration: 2000,
         });
-        setTimeout(() => router.push("/"), 2000);
-      } finally {
+        setTimeout(
+          () => router.push(`/interview/${interviewId}/feedback`),
+          2000
+        );
+      } else {
         setIsLoading(false);
+        toast.error("Error processing interview", {
+          description: "Please try again later",
+        });
+        router.push("/");
       }
     };
 
     if (callStatus === CallStatus.FINISHED) {
       if (type === "generate") {
-        toast.info("Call ended", {
-          description: "Redirecting to home...",
-          duration: 2000,
-        });
-        setTimeout(() => router.push("/"), 2000);
+        router.push("/");
       } else {
         handleGenerateFeedback(messages);
       }
@@ -199,6 +181,7 @@ const Agent = ({
   // Function to handle call start
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
+
     setIsLoading(true);
 
     toast.info("Starting call", {
@@ -206,41 +189,33 @@ const Agent = ({
       duration: 2000,
     });
 
-    try {
-      if (type === "generate") {
-        await vapi.start(workflowId, {
-          variableValues: {
-            username: userName,
-            userid: userId,
-          },
-        });
-      } else {
-        let formattedQuestions = "";
-        if (questions) {
-          formattedQuestions = questions
-            .map((question) => `- ${question}`)
-            .join("\n");
-        }
-
-        await vapi.start(interviewer, {
-          variableValues: {
-            questions: formattedQuestions,
-          },
-        });
+    if (type === "generate") {
+      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
+        variableValues: {
+          username: userName,
+          userid: userId,
+        },
+      });
+    } else {
+      let formattedQuestions = "";
+      if (questions) {
+        formattedQuestions = questions
+          .map((question) => `- ${question}`)
+          .join("\n");
       }
-    } catch (error) {
-      console.error("Call start error:", error);
-      setIsLoading(false);
-      toast.error("Failed to start call", {
-        description: "Please try again.",
+
+      await vapi.start(interviewer, {
+        variableValues: {
+          questions: formattedQuestions,
+        },
       });
     }
   };
 
   // Function to handle disconnect call
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
-    await vapi.stop();
+    vapi.stop();
   };
 
   // Check if call is inactive or finished
@@ -248,10 +223,7 @@ const Agent = ({
     callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
 
   // Determine if component should be disabled
-  const isDisabled =
-    isLoading ||
-    callStatus === CallStatus.ANALYZING ||
-    callStatus === CallStatus.CONNECTING;
+  const isDisabled = isLoading || callStatus === CallStatus.CONNECTING;
 
   return (
     <>
@@ -261,6 +233,7 @@ const Agent = ({
           isDisabled && "opacity-50 pointer-events-none"
         )}
       >
+        {/* AI Interviewer Card */}
         <div
           className={`card-interviewer ${
             isSpeaking
@@ -271,23 +244,25 @@ const Agent = ({
           <div className="avatar">
             <Image
               src="/ai-avatar.png"
-              alt="vapi"
+              alt="profile-image"
               width={65}
               height={54}
               className="object-cover"
             />
+            {isSpeaking && <span className="animate-speak" />}
           </div>
           <h3>AI Interviewer</h3>
         </div>
 
+        {/* User Profile Card */}
         <div className="card-border">
           <div className="card-content">
             <Image
               src="/user-avatar.png"
-              alt="user avatar"
-              width={540}
-              height={540}
-              className="object-cover rounded-full size-[120px]"
+              alt="profile-image"
+              width={539}
+              height={539}
+              className="rounded-full object-cover size-[120px]"
             />
             <h3>{userName}</h3>
           </div>
@@ -314,12 +289,12 @@ const Agent = ({
         {callStatus !== "ACTIVE" ? (
           <button
             className="relative btn-call"
-            onClick={handleCall}
+            onClick={() => handleCall()}
             disabled={isDisabled}
           >
             <span
               className={cn(
-                "absolute animate-ping rounded-full opacity-75 ",
+                "absolute animate-ping rounded-full opacity-75",
                 callStatus !== "CONNECTING" && "hidden"
               )}
             />
@@ -334,7 +309,7 @@ const Agent = ({
         ) : (
           <button
             className="btn-disconnect"
-            onClick={handleDisconnect}
+            onClick={() => handleDisconnect()}
             disabled={isDisabled}
           >
             End Call
