@@ -13,6 +13,7 @@ import { createFeedback } from "@/lib/actions/feedback.action";
 
 // VAPI SDK imports
 import { vapi } from "@/lib/vapi.sdk";
+import { toast } from "sonner";
 
 // enum CallStatus
 enum CallStatus {
@@ -20,6 +21,7 @@ enum CallStatus {
   CONNECTING = "CONNECTING",
   ACTIVE = "ACTIVE",
   FINISHED = "FINISHED",
+  ANALYZING = "ANALYZING",
 }
 
 // SavedMessage interface
@@ -52,16 +54,36 @@ const Agent = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [lastMessage, setLastMessage] = useState<string>("");
+  const [animatedDots, setAnimatedDots] = useState(".");
 
   const workflowId = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!;
+
+  // Animate dots effect
+  useEffect(() => {
+    let isMounted = true;
+    if (isLoading) {
+      const interval = setInterval(() => {
+        if (isMounted) {
+          setAnimatedDots((prev) => (prev.length >= 3 ? "." : prev + "."));
+        }
+      }, 500);
+
+      return () => {
+        clearInterval(interval);
+        isMounted = false;
+      };
+    }
+  }, [isLoading]);
 
   // useEffect hook to handle event listeners
   useEffect(() => {
     // Event listeners
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
+      setIsLoading(false);
     };
 
     const onCallEnd = () => {
@@ -87,6 +109,10 @@ const Agent = ({
 
     const onError = (error: Error) => {
       console.log("Error:", error);
+      setIsLoading(false);
+      toast.error("Call initialization failed", {
+        description: error.message,
+      });
     };
 
     // Add event listeners
@@ -117,25 +143,53 @@ const Agent = ({
     // Function to handle generating feedback
     const handleGenerateFeedback = async (messages: SavedMessage[]) => {
       console.log("handleGenerateFeedback");
+      setCallStatus(CallStatus.ANALYZING);
+      setIsLoading(true);
 
-      const { success, feedbackId: id } = await createFeedback({
-        interviewId: interviewId!,
-        userId: userId!,
-        transcript: messages,
-        feedbackId,
+      toast.info("Analyzing interview", {
+        description: "Please wait while we process your interview...",
+        duration: 3000,
       });
 
-      if (success && id) {
-        router.push(`/interview/${interviewId}/feedback`);
-      } else {
-        console.log("Error saving feedback");
-        router.push("/");
+      try {
+        const { success, feedbackId: id } = await createFeedback({
+          interviewId: interviewId!,
+          userId: userId!,
+          transcript: messages,
+          feedbackId,
+        });
+
+        if (success && id) {
+          toast.success("Interview processed successfully!", {
+            description: "Redirecting to feedback...",
+            duration: 2000,
+          });
+          setTimeout(
+            () => router.push(`/interview/${interviewId}/feedback`),
+            2000
+          );
+        } else {
+          throw new Error("Feedback creation failed");
+        }
+      } catch (error) {
+        console.log("Error:", error);
+        toast.error("Error processing interview", {
+          description: "Redirecting to home...",
+          duration: 2000,
+        });
+        setTimeout(() => router.push("/"), 2000);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     if (callStatus === CallStatus.FINISHED) {
       if (type === "generate") {
-        router.push("/");
+        toast.info("Call ended", {
+          description: "Redirecting to home...",
+          duration: 2000,
+        });
+        setTimeout(() => router.push("/"), 2000);
       } else {
         handleGenerateFeedback(messages);
       }
@@ -145,26 +199,40 @@ const Agent = ({
   // Function to handle call start
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
+    setIsLoading(true);
 
-    if (type === "generate") {
-      await vapi.start(workflowId, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
-      });
-    } else {
-      let formattedQuestions = "";
-      if (questions) {
-        formattedQuestions = questions
-          .map((question) => `- ${question}`)
-          .join("\n");
+    toast.info("Starting call", {
+      description: "Please wait while we connect...",
+      duration: 2000,
+    });
+
+    try {
+      if (type === "generate") {
+        await vapi.start(workflowId, {
+          variableValues: {
+            username: userName,
+            userid: userId,
+          },
+        });
+      } else {
+        let formattedQuestions = "";
+        if (questions) {
+          formattedQuestions = questions
+            .map((question) => `- ${question}`)
+            .join("\n");
+        }
+
+        await vapi.start(interviewer, {
+          variableValues: {
+            questions: formattedQuestions,
+          },
+        });
       }
-
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
+    } catch (error) {
+      console.error("Call start error:", error);
+      setIsLoading(false);
+      toast.error("Failed to start call", {
+        description: "Please try again.",
       });
     }
   };
@@ -179,9 +247,20 @@ const Agent = ({
   const isCallInactiveOrFinished =
     callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
 
+  // Determine if component should be disabled
+  const isDisabled =
+    isLoading ||
+    callStatus === CallStatus.ANALYZING ||
+    callStatus === CallStatus.CONNECTING;
+
   return (
     <>
-      <div className="call-view">
+      <div
+        className={cn(
+          "call-view",
+          isDisabled && "opacity-50 pointer-events-none"
+        )}
+      >
         <div
           className={`card-interviewer ${
             isSpeaking
@@ -233,18 +312,32 @@ const Agent = ({
 
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (
-          <button className="relative btn-call" onClick={handleCall}>
+          <button
+            className="relative btn-call"
+            onClick={handleCall}
+            disabled={isDisabled}
+          >
             <span
               className={cn(
                 "absolute animate-ping rounded-full opacity-75 ",
                 callStatus !== "CONNECTING" && "hidden"
               )}
             />
-            <span>{isCallInactiveOrFinished ? "Call" : "..."}</span>
+            <span>
+              {isCallInactiveOrFinished
+                ? "Start Call"
+                : isLoading
+                ? `Starting${animatedDots}`
+                : "..."}
+            </span>
           </button>
         ) : (
-          <button className="btn-disconnect" onClick={handleDisconnect}>
-            End
+          <button
+            className="btn-disconnect"
+            onClick={handleDisconnect}
+            disabled={isDisabled}
+          >
+            End Call
           </button>
         )}
       </div>
