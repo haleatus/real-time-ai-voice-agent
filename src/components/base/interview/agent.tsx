@@ -9,7 +9,7 @@ import React, { useEffect, useState } from "react";
 import { interviewer } from "@/constants";
 
 // Actions imports
-import { createFeedback } from "@/lib/actions/general.action";
+import { createFeedback } from "@/lib/actions/feedback.action";
 
 // VAPI SDK imports
 import { vapi } from "@/lib/vapi.sdk";

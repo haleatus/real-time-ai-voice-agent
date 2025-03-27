@@ -46,3 +46,14 @@ export async function getLatestInterviews(
     ...doc.data(),
   })) as Interview[];
 }
+
+/**
+ * Interview detail by id
+ * @param id
+ * @returns Interview detail by id
+ */
+export async function getInterviewById(id: string): Promise<Interview | null> {
+  const interview = await db.collection("interviews").doc(id).get();
+
+  return interview.data() as Interview | null;
+}
