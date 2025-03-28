@@ -29,6 +29,9 @@ const LandingPage = async () => {
     getLatestInterviews({ userId: user?.id! }),
   ]);
 
+  console.log("u", userInterviews);
+  console.log(latestInterviews);
+
   // Check if the user has past interviews
   const hasPastInterviews = (userInterviews?.length ?? 0) > 0;
 
@@ -59,7 +62,7 @@ const LandingPage = async () => {
           style={{ transform: "scaleX(-1)" }}
         />
       </section>
-      <section className="flex flex-col mt-8 gap-6">
+      <section className="flex flex-col mt-4 gap-6">
         <h2>Your Interviews</h2>
         <div className="interviews-section">
           {hasPastInterviews ? (
@@ -71,7 +74,7 @@ const LandingPage = async () => {
           )}
         </div>
       </section>
-      <section className="flex flex-col gap-6 mt-8">
+      <section className="flex flex-col gap-6 mt-4">
         <h2>Other User&apos;s Interviews</h2>
 
         <div className="interviews-section">
