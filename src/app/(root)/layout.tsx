@@ -30,7 +30,9 @@ const RootLayout = async ({ children }: { children: ReactNode }) => {
       <nav className="flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logo.svg" alt="logo" width={32} height={32} />
-          <h2>Prepme</h2>
+          <h2 className="text-[24px] font-semi-bold hover:text-orange-400 transition-colors duration-300">
+            VirtIQ
+          </h2>
         </Link>
         <LogoutButton />
       </nav>
