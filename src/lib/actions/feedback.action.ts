@@ -25,14 +25,28 @@ export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
   try {
+    // Validate transcript length and content
+    if (!transcript || transcript.length < 4) {
+      return {
+        success: false,
+        error: "Interview too short to generate meaningful feedback",
+      };
+    }
+
+    // Count meaningful user messages (excluding system/assistant messages)
+    const userMessageCount = transcript.filter(
+      (msg) => msg.role === "user" && msg.content.trim().length > 0
+    ).length;
+
+    // Require at least 3 meaningful user messages
+    if (userMessageCount < 3) {
+      return {
+        success: false,
+        error: "Not enough user interaction to generate feedback",
+      };
+    }
+
     // Format the transcript
-    /**
-     * The formatted transcript will look like this:
-     * - user: Hello, how are you?
-     * - system/assistant: I'm good, thank you.
-     * - user: That's great to hear.
-     * - system/assistant: Yes, it is.
-     */
     const formattedTranscript = transcript
       .map(
         (sentence: { role: string; content: string }) =>
@@ -47,11 +61,14 @@ export async function createFeedback(params: CreateFeedbackParams) {
       }),
       schema: feedbackSchema,
       prompt: `
-        You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
+        You are an AI interviewer analyzing a mock interview. 
+        IMPORTANT: If the interview is very brief or lacks substantial content, do not generate a full score.
+        
         Transcript:
         ${formattedTranscript}
 
-        Please score the candidate from 0 to 100 in the following areas. Do not add categories other than the ones provided:
+        Please carefully evaluate the candidate. If there is insufficient information, indicate this in the assessment.
+        Score the candidate from 0 to 100 in these areas:
         - **Communication Skills**: Clarity, articulation, structured responses.
         - **Technical Knowledge**: Understanding of key concepts for the role.
         - **Problem-Solving**: Ability to analyze problems and propose solutions.
@@ -59,7 +76,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
         - **Confidence & Clarity**: Confidence in responses, engagement, and clarity.
         `,
       system:
-        "You are a professional interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories",
+        "You are a professional interviewer analyzing a mock interview. Provide a fair and thorough assessment based on available information.",
     });
 
     // Feedback object

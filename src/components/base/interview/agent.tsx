@@ -55,12 +55,14 @@ const Agent = ({
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [lastMessage, setLastMessage] = useState<string>("");
+  const [lastThreeMessages, setLastThreeMessages] = useState<SavedMessage[]>(
+    []
+  );
 
   const [isLoading, setIsLoading] = useState(false);
   const [animatedDots, setAnimatedDots] = useState(".");
 
-  // Animate dots effect
+  // Animated dots effect
   useEffect(() => {
     let isMounted = true;
     if (isLoading) {
@@ -92,7 +94,15 @@ const Agent = ({
     const onMessage = (message: Message) => {
       if (message.type === "transcript" && message.transcriptType === "final") {
         const newMessage = { role: message.role, content: message.transcript };
-        setMessages((prev) => [...prev, newMessage]);
+        setMessages((prev) => {
+          const updatedMessages = [...prev, newMessage];
+
+          // Update last three messages
+          const slicedMessages = updatedMessages.slice(-3);
+          setLastThreeMessages(slicedMessages);
+
+          return updatedMessages;
+        });
       }
     };
 
@@ -123,7 +133,7 @@ const Agent = ({
     vapi.on("speech-end", onSpeechEnd);
     vapi.on("error", onError);
 
-    // Cleanup so we don't have multiple listeners
+    // Cleanup
     return () => {
       vapi.off("call-start", onCallStart);
       vapi.off("call-end", onCallEnd);
@@ -134,63 +144,55 @@ const Agent = ({
     };
   }, []);
 
-  // useEffect hook that will execute when something changes
+  // useEffect hook that will execute when something changes Feedback generation useEffect
   useEffect(() => {
-    if (messages.length > 0) {
-      setLastMessage(messages[messages.length - 1].content);
-    }
-
-    // Function to handle generating feedback
-    const handleGenerateFeedback = async (messages: SavedMessage[]) => {
-      try {
-        console.log("handleGenerateFeedback");
-
-        // Set status to PROCESSING to fully disable the component
-        setCallStatus(CallStatus.PROCESSING);
-        setIsLoading(true);
-
-        toast.info("Analyzing interview", {
-          description: "Please wait while we process your interview...",
-          duration: 3000,
-        });
-
-        const { success, feedbackId: id } = await createFeedback({
-          interviewId: interviewId!,
-          userId: userId!,
-          transcript: messages,
-          feedbackId,
-        });
-
-        if (success && id) {
-          toast.success("Interview processed successfully!", {
-            description: "Redirecting to feedback...",
-            duration: 2000,
-          });
-          setTimeout(
-            () => router.push(`/interview/${interviewId}/feedback`),
-            2000
-          );
-        } else {
-          toast.error("Error processing interview", {
-            description: "Please try again later",
-          });
-          router.push("/");
-        }
-      } catch (error) {
-        console.error("Feedback generation error:", error);
-        toast.error("Unexpected error", {
-          description: "Failed to process interview",
-        });
-        router.push("/");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (callStatus === CallStatus.FINISHED) {
       if (type === "generate") {
         router.push("/");
       } else {
+        const handleGenerateFeedback = async (messages: SavedMessage[]) => {
+          try {
+            setCallStatus(CallStatus.PROCESSING);
+            setIsLoading(true);
+
+            toast.info("Analyzing interview", {
+              description: "Please wait while we process your interview...",
+              duration: 3000,
+            });
+
+            const result = await createFeedback({
+              interviewId: interviewId!,
+              userId: userId!,
+              transcript: messages,
+              feedbackId,
+            });
+
+            if (result.success && result.feedbackId) {
+              toast.success("Interview processed successfully!", {
+                description: "Redirecting to feedback...",
+                duration: 2000,
+              });
+              setTimeout(
+                () => router.push(`/interview/${interviewId}/feedback`),
+                2000
+              );
+            } else {
+              toast.error("Error processing interview", {
+                description: result.error || "Please try again later",
+              });
+              router.push("/");
+            }
+          } catch (error) {
+            console.error("Feedback generation error:", error);
+            toast.error("Unexpected error", {
+              description: "Failed to process interview",
+            });
+            router.push("/");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
         handleGenerateFeedback(messages);
       }
     }
@@ -311,21 +313,34 @@ const Agent = ({
         </div>
       </div>
 
-      {messages.length > 0 && (
-        <div className="transcript-border">
-          <div className="transcript">
-            <p
-              key={lastMessage}
-              className={cn(
-                "transition-opacity duration-500 opacity-0",
-                "animate-fadeIn opacity-100"
-              )}
-            >
-              {lastMessage}
-            </p>
+      <div className="w-full max-w-3xl mx-auto mt-6 mb-8">
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-1 rounded-xl shadow-md">
+          <div className="bg-white dark:bg-gray-950 rounded-lg p-4 space-y-4">
+            {lastThreeMessages.length > 0 ? (
+              lastThreeMessages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "transition-all duration-300 animate-fadeIn opacity-100 p-3 rounded-lg max-w-[85%]",
+                    msg.role === "user"
+                      ? "ml-auto bg-purple-100 dark:bg-purple-900/30 text-gray-800 dark:text-gray-200"
+                      : "bg-indigo-50 dark:bg-indigo-950/40 text-gray-800 dark:text-gray-200"
+                  )}
+                >
+                  <div className="font-medium text-xs mb-1 text-gray-500 dark:text-gray-400">
+                    {msg.role === "user" ? userName : "AI Interviewer"}
+                  </div>
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-gray-500 dark:text-gray-400 text-sm italic">
+                No messages yet. Start the call to begin the interview.
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (
