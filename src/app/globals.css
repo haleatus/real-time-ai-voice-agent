@@ -194,7 +194,7 @@
   }
 
   .card-border {
-    @apply border-gradient p-0.5 rounded-xl w-fit;
+    @apply border-gradient p-0.5 rounded-xl w-fit hover:hover-border-gradient;
   }
 
   .card {
@@ -308,6 +308,10 @@
 
 @utility border-gradient {
   @apply bg-gradient-to-b from-[#ffffff54] to-[#0b213823];
+}
+
+@utility hover-border-gradient {
+  @apply bg-gradient-to-b from-[#F0503854] to-[#0b213823];
 }
 
 @utility pattern {

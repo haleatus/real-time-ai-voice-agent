@@ -22,6 +22,7 @@ enum CallStatus {
   CONNECTING = "CONNECTING",
   ACTIVE = "ACTIVE",
   FINISHED = "FINISHED",
+  PROCESSING = "PROCESSING", // New status for feedback generation
 }
 
 // SavedMessage interface
@@ -80,10 +81,12 @@ const Agent = ({
   useEffect(() => {
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
+      setIsLoading(false);
     };
 
     const onCallEnd = () => {
       setCallStatus(CallStatus.FINISHED);
+      setIsLoading(false);
     };
 
     const onMessage = (message: Message) => {
@@ -105,6 +108,11 @@ const Agent = ({
 
     const onError = (error: Error) => {
       console.log("Error:", error);
+      toast.error("Call Error", {
+        description: error.message || "An unexpected error occurred",
+      });
+      setCallStatus(CallStatus.FINISHED);
+      setIsLoading(false);
     };
 
     // Add event listeners
@@ -126,7 +134,7 @@ const Agent = ({
     };
   }, []);
 
-  // useEffect hook that will execute when some thing changes
+  // useEffect hook that will execute when something changes
   useEffect(() => {
     if (messages.length > 0) {
       setLastMessage(messages[messages.length - 1].content);
@@ -134,38 +142,48 @@ const Agent = ({
 
     // Function to handle generating feedback
     const handleGenerateFeedback = async (messages: SavedMessage[]) => {
-      console.log("handleGenerateFeedback");
+      try {
+        console.log("handleGenerateFeedback");
 
-      setIsLoading(true);
+        // Set status to PROCESSING to fully disable the component
+        setCallStatus(CallStatus.PROCESSING);
+        setIsLoading(true);
 
-      toast.info("Analyzing interview", {
-        description: "Please wait while we process your interview...",
-        duration: 3000,
-      });
-
-      const { success, feedbackId: id } = await createFeedback({
-        interviewId: interviewId!,
-        userId: userId!,
-        transcript: messages,
-        feedbackId,
-      });
-
-      if (success && id) {
-        setIsLoading(false);
-        toast.success("Interview processed successfully!", {
-          description: "Redirecting to feedback...",
-          duration: 2000,
+        toast.info("Analyzing interview", {
+          description: "Please wait while we process your interview...",
+          duration: 3000,
         });
-        setTimeout(
-          () => router.push(`/interview/${interviewId}/feedback`),
-          2000
-        );
-      } else {
-        setIsLoading(false);
-        toast.error("Error processing interview", {
-          description: "Please try again later",
+
+        const { success, feedbackId: id } = await createFeedback({
+          interviewId: interviewId!,
+          userId: userId!,
+          transcript: messages,
+          feedbackId,
+        });
+
+        if (success && id) {
+          toast.success("Interview processed successfully!", {
+            description: "Redirecting to feedback...",
+            duration: 2000,
+          });
+          setTimeout(
+            () => router.push(`/interview/${interviewId}/feedback`),
+            2000
+          );
+        } else {
+          toast.error("Error processing interview", {
+            description: "Please try again later",
+          });
+          router.push("/");
+        }
+      } catch (error) {
+        console.error("Feedback generation error:", error);
+        toast.error("Unexpected error", {
+          description: "Failed to process interview",
         });
         router.push("/");
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -180,50 +198,74 @@ const Agent = ({
 
   // Function to handle call start
   const handleCall = async () => {
-    setCallStatus(CallStatus.CONNECTING);
+    try {
+      setCallStatus(CallStatus.CONNECTING);
+      setIsLoading(true);
 
-    setIsLoading(true);
-
-    toast.info("Starting call", {
-      description: "Please wait while we connect...",
-      duration: 2000,
-    });
-
-    if (type === "generate") {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
+      toast.info("Starting call", {
+        description: "Please wait while we connect...",
+        duration: 2000,
       });
-    } else {
-      let formattedQuestions = "";
-      if (questions) {
-        formattedQuestions = questions
-          .map((question) => `- ${question}`)
-          .join("\n");
+
+      if (type === "generate") {
+        await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
+          variableValues: {
+            username: userName,
+            userid: userId,
+          },
+        });
+      } else {
+        let formattedQuestions = "";
+        if (questions) {
+          formattedQuestions = questions
+            .map((question) => `- ${question}`)
+            .join("\n");
+        }
+
+        await vapi.start(interviewer, {
+          variableValues: {
+            questions: formattedQuestions,
+          },
+        });
       }
-
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
+    } catch (error) {
+      console.error("Call start error:", error);
+      toast.error("Call Start Failed", {
+        description: "Unable to start the call. Please try again.",
       });
+      setCallStatus(CallStatus.INACTIVE);
+      setIsLoading(false);
     }
   };
 
   // Function to handle disconnect call
-  const handleDisconnect = () => {
-    setCallStatus(CallStatus.FINISHED);
-    vapi.stop();
+  const handleDisconnect = async () => {
+    try {
+      // Explicitly stop the call
+      await vapi.stop();
+
+      // Set status to finished
+      setCallStatus(CallStatus.FINISHED);
+
+      // Show a toast notification
+      toast.info("Call Ended", {
+        description: "The call has been disconnected.",
+      });
+    } catch (error) {
+      console.error("Disconnect error:", error);
+      toast.error("Disconnect Failed", {
+        description: "Unable to end the call. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Check if call is inactive or finished
-  const isCallInactiveOrFinished =
-    callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
-
   // Determine if component should be disabled
-  const isDisabled = isLoading || callStatus === CallStatus.CONNECTING;
+  const isDisabled =
+    isLoading ||
+    callStatus === CallStatus.CONNECTING ||
+    callStatus === CallStatus.PROCESSING;
 
   return (
     <>
@@ -289,7 +331,7 @@ const Agent = ({
         {callStatus !== "ACTIVE" ? (
           <button
             className="relative btn-call"
-            onClick={() => handleCall()}
+            onClick={handleCall}
             disabled={isDisabled}
           >
             <span
@@ -299,17 +341,18 @@ const Agent = ({
               )}
             />
             <span>
-              {isCallInactiveOrFinished
+              {callStatus === CallStatus.INACTIVE ||
+              callStatus === CallStatus.FINISHED
                 ? "Start Call"
                 : isLoading
-                ? `Starting${animatedDots}`
+                ? `${animatedDots}`
                 : "..."}
             </span>
           </button>
         ) : (
           <button
             className="btn-disconnect"
-            onClick={() => handleDisconnect()}
+            onClick={handleDisconnect}
             disabled={isDisabled}
           >
             End Call
