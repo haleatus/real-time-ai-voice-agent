@@ -12,7 +12,6 @@ interface FormFieldProps<T extends FieldValues> {
   label: string;
   placeholder?: string;
   type?: "text" | "email" | "password" | "file";
-  disabled?: boolean;
 }
 
 /**
@@ -25,24 +24,24 @@ const FormField = <T extends FieldValues>({
   label,
   placeholder,
   type,
-  disabled,
 }: FormFieldProps<T>) => (
   <Controller
     control={control}
     name={name}
     render={({ field }) => (
       <FormItem>
-        <FormLabel className="label">{label}</FormLabel>
+        <FormLabel className="text-sm font-medium text-gray-600">
+          {label}
+        </FormLabel>
         <FormControl>
           <Input
-            className="input"
+            className="h-10 border-gray-200/10 focus:border-primary focus:ring-1 focus:ring-primary"
             placeholder={placeholder}
             {...field}
             type={type}
-            disabled={disabled}
           />
         </FormControl>
-        <FormMessage />
+        <FormMessage className="text-xs" />
       </FormItem>
     )}
   />

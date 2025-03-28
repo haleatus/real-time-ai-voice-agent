@@ -37,21 +37,27 @@ const authFormSchema = (type: FormType) => {
   });
 };
 
-// Function to map Firebase error codes to user-friendly messages
-const getFirebaseErrorMessage = (error: AuthError) => {
+// Custom error handling function
+const handleFirebaseError = (error: AuthError) => {
   switch (error.code) {
     case "auth/invalid-credential":
-      return "Invalid email or password. Please try again.";
+      return "Invalid email or password. Please check and try again.";
+    case "auth/invalid-email":
+      return "Invalid email address format.";
+    case "auth/user-disabled":
+      return "This user account has been disabled.";
     case "auth/user-not-found":
       return "No user found with this email address.";
     case "auth/wrong-password":
       return "Incorrect password. Please try again.";
     case "auth/email-already-in-use":
-      return "This email is already registered. Please use a different email or sign in.";
+      return "Email address is already registered.";
     case "auth/weak-password":
       return "Password is too weak. Please choose a stronger password.";
     case "auth/network-request-failed":
-      return "Network error. Please check your internet connection.";
+      return "Network error. Please check your connection.";
+    case "auth/too-many-requests":
+      return "Too many login attempts. Please try again later.";
     default:
       return "An unexpected error occurred. Please try again.";
   }
@@ -64,7 +70,7 @@ const getFirebaseErrorMessage = (error: AuthError) => {
  */
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const formSchema = authFormSchema(type);
 
@@ -80,10 +86,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Prevent multiple submissions
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
+    // Reset previous form errors
+    setFormError(null);
 
     try {
       if (type === "sign-in") {
@@ -101,7 +105,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
         // Check if the sign in was successful
         if (!idToken) {
-          toast.error("Sign in failed");
+          const errorMessage = "Sign in failed";
+          setFormError(errorMessage);
+          toast.error(errorMessage);
           return;
         }
 
@@ -138,7 +144,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
         // Check if the sign up was successful
         if (!result?.success) {
-          toast.error(result?.message || "Sign up failed");
+          const errorMessage = result?.message || "Sign up failed";
+          setFormError(errorMessage);
+          toast.error(errorMessage);
           return;
         }
 
@@ -149,20 +157,26 @@ const AuthForm = ({ type }: { type: FormType }) => {
         router.push("/sign-in");
       }
     } catch (error) {
-      // Handle Firebase authentication errors
+      // Check if error is an AuthError
       if (error instanceof Error) {
-        const firebaseError = error as AuthError;
-        const errorMessage = getFirebaseErrorMessage(firebaseError);
+        const authError = error as AuthError;
+        const errorMessage = handleFirebaseError(authError);
+
+        // Set form-level error
+        setFormError(errorMessage);
+
+        // Show toast notification
         toast.error(errorMessage);
 
         // Log the full error for debugging
-        console.error("Authentication Error:", firebaseError);
+        // console.error("Authentication Error:", authError);
       } else {
-        toast.error("An unexpected error occurred");
+        const errorMessage = "An unexpected error occurred";
+        setFormError(errorMessage);
+        toast.error(errorMessage);
+        // Log the full error for debugging
+        // console.error(error);
       }
-    } finally {
-      // Always reset submitting state
-      setIsSubmitting(false);
     }
   }
 
@@ -170,18 +184,38 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const isSignIn = type === "sign-in";
 
   return (
-    <div className="card-border lg:min-w-[566px]">
-      <div className="flex flex-col gap-4 card py-14 px-10">
-        <div className="flex flex-row gap-2 justify-center">
-          <Image src="/logo.svg" alt="Logo" width={38} height={32} />
-          <h2 className="text-primary-100">Prepme</h2>
+    <div className="w-full max-w-md mx-auto">
+      <div className="flex flex-col space-y-6 p-8 bg-gradient-to-b from-transparent to-sky-500/20 backdrop-blur-3xl rounded-xl shadow-sm border border-gray-100/20">
+        <div className="flex flex-col items-center space-y-2">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/logo.svg"
+              alt="Logo"
+              width={28}
+              height={24}
+              className="h-6 w-auto"
+            />
+            <h2 className="text-xl font-semibold text-white">Prepme</h2>
+          </div>
+          <p className="text-sm text-gray-500">
+            Practice job interviews with AI
+          </p>
         </div>
-        <h3 className="text-center text-sm">Practice job interview with AI</h3>
+
+        {/* Display form-level error message */}
+        {formError && (
+          <div
+            className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-md"
+            role="alert"
+          >
+            {formError}
+          </div>
+        )}
 
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="w-full space-y-6 mt-4 form"
+            className="w-full space-y-4"
           >
             {!isSignIn && (
               <FormField
@@ -189,7 +223,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 name="name"
                 label="Name"
                 placeholder="Your Name"
-                disabled={isSubmitting}
               />
             )}
             <FormField
@@ -198,7 +231,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
               label="Email"
               placeholder="Your email address"
               type="email"
-              disabled={isSubmitting}
             />
             <FormField
               control={form.control}
@@ -206,30 +238,21 @@ const AuthForm = ({ type }: { type: FormType }) => {
               label="Password"
               type="password"
               placeholder="Your Password"
-              disabled={isSubmitting}
             />
-            <Button type="submit" className="btn" disabled={isSubmitting}>
-              {isSubmitting
-                ? isSignIn
-                  ? "Signing In..."
-                  : "Creating Account..."
-                : isSignIn
-                ? "Sign In"
-                : "Create An Account"}
+            <Button type="submit" className="w-full mt-2">
+              {isSignIn ? "Sign In" : "Create An Account"}
             </Button>
           </form>
         </Form>
-        <p className="text-center">
-          {" "}
-          {isSignIn ? "Don't have an account?" : "Already have and account?"}
+        <div className="text-center text-sm text-gray-500">
+          {isSignIn ? "Don't have an account?" : "Already have an account?"}
           <Link
             href={isSignIn ? "/sign-up" : "/sign-in"}
-            className="font-bold text-user-primary ml-1"
-            {...(isSubmitting ? { "aria-disabled": true } : {})}
+            className="font-medium text-primary ml-1 hover:underline transition-colors"
           >
             {!isSignIn ? "Sign In" : "Sign Up"}
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
