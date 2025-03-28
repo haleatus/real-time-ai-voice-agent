@@ -241,10 +241,10 @@ const Agent = ({
   };
 
   // Function to handle disconnect call
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     try {
       // Explicitly stop the call
-      await vapi.stop();
+      vapi.stop();
 
       // Set status to finished
       setCallStatus(CallStatus.FINISHED);

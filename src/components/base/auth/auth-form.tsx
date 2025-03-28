@@ -122,9 +122,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
         });
 
         // Show a success message
-        toast.success(
-          `You have successfully signed in. Welcome, ${userCredentials.user.email}!`
-        );
+        toast.success(`You have successfully signed in. Redirecting...`);
 
         setIsSubmitting(false);
 
@@ -157,7 +155,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
         }
 
         // Show a success message
-        toast.success(`You have successfully signed up. Welcome, ${name}!`);
+        toast.success(`You have successfully signed up. Redirecting...`);
 
         setIsSubmitting(false);
 
@@ -212,7 +210,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               height={24}
               className="h-6 w-auto"
             />
-            <h2 className="text-xl font-semibold text-white">Prepme</h2>
+            <h2 className="text-xl font-semibold text-white">VirtIQ</h2>
           </div>
           <p className="text-sm text-gray-500">
             Practice job interviews with AI
