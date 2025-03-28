@@ -8,6 +8,7 @@ import { Button } from "../ui/button";
 import Link from "next/link";
 import DisplayTechIcons from "./display-tech-icons";
 import { Calendar, Star } from "lucide-react";
+import { getFeedbackByInterviewId } from "@/lib/actions/feedback.action";
 
 // Interface for InterviewCardProps
 interface InterviewCardProps {
@@ -19,7 +20,7 @@ interface InterviewCardProps {
   createdAt: string;
 }
 
-const InterviewCard = ({
+const InterviewCard = async ({
   id: interviewId,
   userId,
   role,
@@ -27,7 +28,12 @@ const InterviewCard = ({
   techstack,
   createdAt,
 }: InterviewCardProps) => {
-  const feedback = null as Feedback | null;
+  // Fetch feedback for this specific interview
+  const feedback = await getFeedbackByInterviewId({
+    interviewId,
+    userId,
+  });
+
   const normalizedType = /mix/gi.test(type) ? "Mixed" : type;
   const formattedDate = dayjs(
     feedback?.createdAt || createdAt || Date.now()
@@ -57,11 +63,13 @@ const InterviewCard = ({
               <p className="text-base text-gray-500">{formattedDate}</p>
             </div>
 
-            <div className="flex items-center gap-1 text-sm font-medium text-gray-700">
-              <Star size={18} className="text-yellow-500" />
-              <span className="text-base">{feedback?.totalScore ?? "---"}</span>
-              <span className="text-gray-500">/ 100</span>
-            </div>
+            {feedback && (
+              <div className="flex items-center gap-1 text-sm font-medium text-gray-700">
+                <Star size={18} className="text-yellow-500" />
+                <span className="text-base">{feedback.totalScore}</span>
+                <span className="text-gray-500">/ 100</span>
+              </div>
+            )}
           </div>
 
           <p className="line-clamp-2 mt-4 text-sm text-gray-500">

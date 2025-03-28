@@ -125,20 +125,36 @@ export async function getFeedbackByInterviewId(
   // Destruct the parameters
   const { interviewId, userId } = params;
 
-  // Get the feedback by interview ID and user ID
-  const feedback = await db
-    .collection("feedback")
-    .where("interviewId", "==", interviewId)
-    .where("userId", "==", userId)
-    .limit(1)
-    .get();
+  try {
+    // Try querying with both interviewId and userId
+    const feedbackQuery = await db
+      .collection("feedback")
+      .where("interviewId", "==", interviewId)
+      .where("userId", "==", userId)
+      .limit(1)
+      .get();
 
-  // If feedback is empty, return null
-  if (feedback.empty) return null;
+    // If no feedback found, try querying just by interviewId
+    if (feedbackQuery.empty) {
+      const fallbackQuery = await db
+        .collection("feedback")
+        .where("interviewId", "==", interviewId)
+        .limit(1)
+        .get();
 
-  // Get the feedback document
-  const feedbackDoc = feedback.docs[0];
+      if (fallbackQuery.empty) return null;
 
-  // Return the feedback
-  return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
+      const fallbackDoc = fallbackQuery.docs[0];
+      return { id: fallbackDoc.id, ...fallbackDoc.data() } as Feedback;
+    }
+
+    // Get the feedback document
+    const feedbackDoc = feedbackQuery.docs[0];
+
+    // Return the feedback
+    return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    return null;
+  }
 }
