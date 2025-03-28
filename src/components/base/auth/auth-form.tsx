@@ -26,6 +26,7 @@ import { auth } from "@/firebase/client";
 
 // action imports
 import { signIn, signUp } from "@/lib/actions/auth.action";
+import { cn } from "@/lib/utils";
 
 // Zod schema for form validation
 const authFormSchema = (type: FormType) => {
@@ -71,6 +72,7 @@ const handleFirebaseError = (error: AuthError) => {
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formSchema = authFormSchema(type);
 
@@ -88,6 +90,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     // Reset previous form errors
     setFormError(null);
+
+    setIsSubmitting(true);
 
     try {
       if (type === "sign-in") {
@@ -122,6 +126,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
           `You have successfully signed in. Welcome, ${userCredentials.user.email}!`
         );
 
+        setIsSubmitting(false);
+
         // Redirect the user
         router.push("/");
       } else {
@@ -153,6 +159,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
         // Show a success message
         toast.success(`You have successfully signed up. Welcome, ${name}!`);
 
+        setIsSubmitting(false);
+
         // Redirect the user
         router.push("/sign-in");
       }
@@ -168,12 +176,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
         // Show toast notification
         toast.error(errorMessage);
 
+        setIsSubmitting(false);
         // Log the full error for debugging
         // console.error("Authentication Error:", authError);
       } else {
         const errorMessage = "An unexpected error occurred";
         setFormError(errorMessage);
+
         toast.error(errorMessage);
+
+        setIsSubmitting(false);
         // Log the full error for debugging
         // console.error(error);
       }
@@ -185,7 +197,12 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="flex flex-col space-y-6 p-8 bg-gradient-to-b from-transparent to-sky-500/20 backdrop-blur-3xl rounded-xl shadow-sm border border-gray-100/20">
+      <div
+        className={cn(
+          "flex flex-col space-y-6 p-8 bg-gradient-to-b from-transparent to-sky-500/20 backdrop-blur-3xl rounded-xl shadow-sm border border-gray-100/20",
+          isSubmitting && "opacity-50 pointer-events-none"
+        )}
+      >
         <div className="flex flex-col items-center space-y-2">
           <div className="flex items-center gap-2">
             <Image
@@ -205,7 +222,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
         {/* Display form-level error message */}
         {formError && (
           <div
-            className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-md"
+            className="border border-red-500 backdrop-blur-3xl text-red-600 text-[13px] font-mona-sans flex justify-center px-4 py-1 rounded-md"
             role="alert"
           >
             {formError}
@@ -215,7 +232,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="w-full space-y-4"
+            className="w-full space-y-3"
           >
             {!isSignIn && (
               <FormField
@@ -240,7 +257,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
               placeholder="Your Password"
               showStrengthMeter={!isSignIn}
             />
-            <Button type="submit" className="w-full mt-2 cursor-pointer">
+            <Button
+              type="submit"
+              className="w-full mt-2 cursor-pointer"
+              disabled={isSubmitting}
+            >
               {isSignIn ? "Sign In" : "Create An Account"}
             </Button>
           </form>
