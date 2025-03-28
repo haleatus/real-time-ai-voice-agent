@@ -29,9 +29,6 @@ const LandingPage = async () => {
     getLatestInterviews({ userId: user?.id! }),
   ]);
 
-  console.log("u", userInterviews);
-  console.log(latestInterviews);
-
   // Check if the user has past interviews
   const hasPastInterviews = (userInterviews?.length ?? 0) > 0;
 

@@ -22,7 +22,7 @@ enum CallStatus {
   CONNECTING = "CONNECTING",
   ACTIVE = "ACTIVE",
   FINISHED = "FINISHED",
-  PROCESSING = "PROCESSING", // New status for feedback generation
+  PROCESSING = "PROCESSING",
 }
 
 // SavedMessage interface
@@ -118,11 +118,6 @@ const Agent = ({
 
     const onError = (error: Error) => {
       console.log("Error:", error);
-      toast.error("Call Error", {
-        description: error.message || "An unexpected error occurred",
-      });
-      setCallStatus(CallStatus.FINISHED);
-      setIsLoading(false);
     };
 
     // Add event listeners
@@ -241,13 +236,13 @@ const Agent = ({
   };
 
   // Function to handle disconnect call
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     try {
-      // Explicitly stop the call
-      await vapi.stop();
-
       // Set status to finished
       setCallStatus(CallStatus.FINISHED);
+
+      // Explicitly stop the call
+      vapi.stop();
 
       // Show a toast notification
       toast.info("Call Ended", {
