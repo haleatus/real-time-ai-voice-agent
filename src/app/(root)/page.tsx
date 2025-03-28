@@ -56,6 +56,7 @@ const LandingPage = async () => {
           width={400}
           height={400}
           className="max-sm:hidden"
+          style={{ transform: "scaleX(-1)" }}
         />
       </section>
       <section className="flex flex-col mt-8 gap-6">

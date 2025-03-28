@@ -60,6 +60,7 @@ export function LogoutButton() {
           size={18}
           className="group-hover:translate-x-1 transition-transform duration-300"
         />
+
         <span>{isLoading ? "Logging out..." : "Logout"}</span>
       </span>
       <span className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
