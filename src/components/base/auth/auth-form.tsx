@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 // Zod and react-hook-form imports
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +20,7 @@ import FormField from "../form-field";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  AuthError,
 } from "firebase/auth";
 import { auth } from "@/firebase/client";
 
@@ -36,6 +37,26 @@ const authFormSchema = (type: FormType) => {
   });
 };
 
+// Function to map Firebase error codes to user-friendly messages
+const getFirebaseErrorMessage = (error: AuthError) => {
+  switch (error.code) {
+    case "auth/invalid-credential":
+      return "Invalid email or password. Please try again.";
+    case "auth/user-not-found":
+      return "No user found with this email address.";
+    case "auth/wrong-password":
+      return "Incorrect password. Please try again.";
+    case "auth/email-already-in-use":
+      return "This email is already registered. Please use a different email or sign in.";
+    case "auth/weak-password":
+      return "Password is too weak. Please choose a stronger password.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your internet connection.";
+    default:
+      return "An unexpected error occurred. Please try again.";
+  }
+};
+
 /**
  * AuthForm component
  * @param type - Type of form (sign-in or sign-up)
@@ -43,6 +64,7 @@ const authFormSchema = (type: FormType) => {
  */
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formSchema = authFormSchema(type);
 
@@ -58,6 +80,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Prevent multiple submissions
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
       if (type === "sign-in") {
         const { email, password } = values;
@@ -111,7 +138,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
         // Check if the sign up was successful
         if (!result?.success) {
-          toast.error(result?.message);
+          toast.error(result?.message || "Sign up failed");
           return;
         }
 
@@ -122,10 +149,20 @@ const AuthForm = ({ type }: { type: FormType }) => {
         router.push("/sign-in");
       }
     } catch (error) {
-      // Log the error
-      console.log(error);
-      // Show an error message
-      toast.error(`There was an error: ${error}`);
+      // Handle Firebase authentication errors
+      if (error instanceof Error) {
+        const firebaseError = error as AuthError;
+        const errorMessage = getFirebaseErrorMessage(firebaseError);
+        toast.error(errorMessage);
+
+        // Log the full error for debugging
+        console.error("Authentication Error:", firebaseError);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+    } finally {
+      // Always reset submitting state
+      setIsSubmitting(false);
     }
   }
 
@@ -152,6 +189,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 name="name"
                 label="Name"
                 placeholder="Your Name"
+                disabled={isSubmitting}
               />
             )}
             <FormField
@@ -160,6 +198,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               label="Email"
               placeholder="Your email address"
               type="email"
+              disabled={isSubmitting}
             />
             <FormField
               control={form.control}
@@ -167,9 +206,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
               label="Password"
               type="password"
               placeholder="Your Password"
+              disabled={isSubmitting}
             />
-            <Button type="submit" className="btn">
-              {isSignIn ? "Sign In" : "Create An Account"}
+            <Button type="submit" className="btn" disabled={isSubmitting}>
+              {isSubmitting
+                ? isSignIn
+                  ? "Signing In..."
+                  : "Creating Account..."
+                : isSignIn
+                ? "Sign In"
+                : "Create An Account"}
             </Button>
           </form>
         </Form>
@@ -179,6 +225,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
           <Link
             href={isSignIn ? "/sign-up" : "/sign-in"}
             className="font-bold text-user-primary ml-1"
+            {...(isSubmitting ? { "aria-disabled": true } : {})}
           >
             {!isSignIn ? "Sign In" : "Sign Up"}
           </Link>
