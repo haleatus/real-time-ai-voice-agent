@@ -313,7 +313,7 @@ const Agent = ({
         </div>
       </div>
 
-      <div className="w-full max-w-3xl mx-auto mt-6 mb-8">
+      <div className="w-full mx-auto -my-4">
         <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-1 rounded-xl shadow-md">
           <div className="bg-white dark:bg-gray-950 rounded-lg p-4 space-y-4">
             {lastThreeMessages.length > 0 ? (
