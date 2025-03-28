@@ -9,8 +9,9 @@ const monaSans = Mona_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Prepme",
-  description: "An AI-powered platform for interview preparation",
+  title: "VirtIQ",
+  description:
+    "An AI-powered platform for interview preparation | Virtual AI interviews, real knowledge",
 };
 
 export default function Layout({

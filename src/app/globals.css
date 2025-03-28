@@ -182,7 +182,7 @@
   }
 
   .btn-primary {
-    @apply w-fit !bg-primary-200 !text-dark-100 hover:!bg-primary-200/80 !rounded-full !font-bold px-5 cursor-pointer min-h-10;
+    @apply w-fit !bg-primary-200 !text-dark-100 hover:!bg-primary-200/80 !rounded-full !font-semibold px-4 cursor-pointer min-h-8;
   }
 
   .btn-secondary {
@@ -194,7 +194,7 @@
   }
 
   .card-border {
-    @apply border-gradient p-0.5 rounded-2xl w-fit;
+    @apply border-gradient p-0.5 rounded-xl w-fit;
   }
 
   .card {
@@ -294,7 +294,7 @@
   }
 
   .card-interview {
-    @apply dark-gradient rounded-2xl min-h-full flex flex-col p-6 relative overflow-hidden gap-10 justify-between;
+    @apply purple-gradient-dark rounded-xl min-h-full flex flex-col p-4 relative overflow-hidden gap-6 justify-between;
 
     .badge-text {
       @apply text-sm font-semibold capitalize;
@@ -307,7 +307,7 @@
 }
 
 @utility border-gradient {
-  @apply bg-gradient-to-b from-[#4B4D4F] to-[#4B4D4F33];
+  @apply bg-gradient-to-b from-[#ffffff54] to-[#0b213823];
 }
 
 @utility pattern {
@@ -344,4 +344,24 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 2px;
+  height: 0px;
+}
+
+::-webkit-scrollbar-track {
+  background: none;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-[#F05038] dark:bg-[#F05038];
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500 dark:bg-gray-500;
 }

@@ -12,6 +12,12 @@ import { signOut } from "@/lib/actions/auth.action";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * Logout button component
@@ -43,26 +49,35 @@ export function LogoutButton() {
   };
 
   return (
-    <Button
-      onClick={handleLogout}
-      disabled={isLoading}
-      className={cn(
-        "relative overflow-hidden group cursor-pointer",
-        "bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800",
-        "text-white font-medium",
-        "transition-all duration-300 ease-in-out",
-        "border-0 shadow-md hover:shadow-lg",
-        "flex items-center gap-2 px-4 py-1 h-10"
-      )}
-    >
-      <span className="relative z-10 flex items-center gap-2">
-        <LogOut
-          size={18}
-          className="group-hover:translate-x-1 transition-transform duration-300"
-        />
-        <span>{isLoading ? "Logging out..." : "Logout"}</span>
-      </span>
-      <span className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={handleLogout}
+            disabled={isLoading}
+            className={cn(
+              "relative overflow-hidden group cursor-pointer rounded-full",
+              "bg-black hover:bg-red-700",
+              "text-white font-medium",
+              "transition-all duration-300 ease-in-out",
+              "border-2 border-red-500/50 shadow-md hover:shadow-lg",
+              "flex items-center size-9"
+            )}
+          >
+            <span className="relative z-10 flex items-center">
+              <LogOut
+                size={18}
+                className="group-hover:translate-x-0.5 transition-transform duration-300"
+              />
+            </span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <span className="text-md fon-semibold font-mona-sans">
+            {isLoading ? "Logging out..." : "Logout"}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

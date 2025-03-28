@@ -56,6 +56,7 @@ const LandingPage = async () => {
           width={400}
           height={400}
           className="max-sm:hidden"
+          style={{ transform: "scaleX(-1)" }}
         />
       </section>
       <section className="flex flex-col mt-8 gap-6">
@@ -71,7 +72,7 @@ const LandingPage = async () => {
         </div>
       </section>
       <section className="flex flex-col gap-6 mt-8">
-        <h2>Take an Interview</h2>
+        <h2>Other User&apos;s Interviews</h2>
 
         <div className="interviews-section">
           {hasUpcomingInterviews ? (

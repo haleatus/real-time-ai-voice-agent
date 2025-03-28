@@ -7,6 +7,7 @@ import { getRandomInterviewCover } from "@/lib/utils";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import DisplayTechIcons from "./display-tech-icons";
+import { Calendar, Star } from "lucide-react";
 
 // Interface for InterviewCardProps
 interface InterviewCardProps {
@@ -33,41 +34,37 @@ const InterviewCard = ({
   ).format("MMM D, YYYY");
 
   return (
-    <div className="card-border w-[360px] max-sm:w-full min-h-96">
+    <div className="card-border w-[360px] max-sm:w-full min-h-80">
       <div className="card-interview">
         <div>
-          <div className="absolute top-0 right-0 w-fit px-4 py-2 rounded-bl-lg bg-light-600">
+          <div className="absolute top-0 right-0 w-fit px-3 py-2 rounded-bl-md bg-white/5 border">
             <p className="badge-text">{normalizedType}</p>
           </div>
 
           <Image
             src={getRandomInterviewCover()}
             alt={`cover-image for user ${userId}`}
-            width={90}
-            height={90}
-            className="rounded-full object-fit size-[90px]"
+            width={42}
+            height={42}
+            className="rounded-full object-fit size-[42px]"
           />
 
-          <h3 className="mt-5 capitalize">{role} Interview</h3>
+          <h3 className="mt-3 capitalize font-mona-sans">{role} Interview</h3>
 
           <div className="flex flex-row gap-5 mt-3">
-            <div className="flex flex-row gap-2">
-              <Image
-                src="/calendar.svg"
-                alt="calendar-icon"
-                width={22}
-                height={22}
-              />
-              <p>{formattedDate}</p>
+            <div className="flex items-center gap-1 text-sm font-medium text-sky-400">
+              <Calendar size={16} />
+              <p className="text-base text-gray-500">{formattedDate}</p>
             </div>
 
-            <div className="flex flex-row gap-2 items-center">
-              <Image src="/star.svg" alt="star-icon" width={22} height={22} />
-              <p>{feedback?.totalScore || "---"}/100</p>
+            <div className="flex items-center gap-1 text-sm font-medium text-gray-700">
+              <Star size={18} className="text-yellow-500" />
+              <span className="text-base">{feedback?.totalScore ?? "---"}</span>
+              <span className="text-gray-500">/ 100</span>
             </div>
           </div>
 
-          <p className="line-clamp-2 mt-5">
+          <p className="line-clamp-2 mt-4 text-sm text-gray-500">
             {feedback?.finalAssessment ||
               "You haven't taken the interview yet. Take it now to improve your skills."}
           </p>
@@ -76,17 +73,17 @@ const InterviewCard = ({
         <div className="flex flex-row justify-between">
           <DisplayTechIcons techStack={techstack} />
 
-          <Button className="btn-primary">
-            <Link
-              href={
-                feedback
-                  ? `/interview/${interviewId}/feedback`
-                  : `/interview/${interviewId}`
-              }
-            >
+          <Link
+            href={
+              feedback
+                ? `/interview/${interviewId}/feedback`
+                : `/interview/${interviewId}`
+            }
+          >
+            <Button className="btn-primary">
               {feedback ? "Check Feedback" : "View Interview"}
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

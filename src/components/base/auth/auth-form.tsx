@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 // Zod and react-hook-form imports
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,11 +20,13 @@ import FormField from "../form-field";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  AuthError,
 } from "firebase/auth";
 import { auth } from "@/firebase/client";
 
 // action imports
 import { signIn, signUp } from "@/lib/actions/auth.action";
+import { cn } from "@/lib/utils";
 
 // Zod schema for form validation
 const authFormSchema = (type: FormType) => {
@@ -36,6 +38,32 @@ const authFormSchema = (type: FormType) => {
   });
 };
 
+// Custom error handling function
+const handleFirebaseError = (error: AuthError) => {
+  switch (error.code) {
+    case "auth/invalid-credential":
+      return "Invalid email or password. Please check and try again.";
+    case "auth/invalid-email":
+      return "Invalid email address format.";
+    case "auth/user-disabled":
+      return "This user account has been disabled.";
+    case "auth/user-not-found":
+      return "No user found with this email address.";
+    case "auth/wrong-password":
+      return "Incorrect password. Please try again.";
+    case "auth/email-already-in-use":
+      return "Email address is already registered.";
+    case "auth/weak-password":
+      return "Password is too weak. Please choose a stronger password.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection.";
+    case "auth/too-many-requests":
+      return "Too many login attempts. Please try again later.";
+    default:
+      return "An unexpected error occurred. Please try again.";
+  }
+};
+
 /**
  * AuthForm component
  * @param type - Type of form (sign-in or sign-up)
@@ -43,6 +71,8 @@ const authFormSchema = (type: FormType) => {
  */
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formSchema = authFormSchema(type);
 
@@ -58,6 +88,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Reset previous form errors
+    setFormError(null);
+
+    setIsSubmitting(true);
+
     try {
       if (type === "sign-in") {
         const { email, password } = values;
@@ -74,7 +109,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
         // Check if the sign in was successful
         if (!idToken) {
-          toast.error("Sign in failed");
+          const errorMessage = "Sign in failed";
+          setFormError(errorMessage);
+          toast.error(errorMessage);
           return;
         }
 
@@ -88,6 +125,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
         toast.success(
           `You have successfully signed in. Welcome, ${userCredentials.user.email}!`
         );
+
+        setIsSubmitting(false);
 
         // Redirect the user
         router.push("/");
@@ -111,21 +150,45 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
         // Check if the sign up was successful
         if (!result?.success) {
-          toast.error(result?.message);
+          const errorMessage = result?.message || "Sign up failed";
+          setFormError(errorMessage);
+          toast.error(errorMessage);
           return;
         }
 
         // Show a success message
         toast.success(`You have successfully signed up. Welcome, ${name}!`);
 
+        setIsSubmitting(false);
+
         // Redirect the user
         router.push("/sign-in");
       }
     } catch (error) {
-      // Log the error
-      console.log(error);
-      // Show an error message
-      toast.error(`There was an error: ${error}`);
+      // Check if error is an AuthError
+      if (error instanceof Error) {
+        const authError = error as AuthError;
+        const errorMessage = handleFirebaseError(authError);
+
+        // Set form-level error
+        setFormError(errorMessage);
+
+        // Show toast notification
+        toast.error(errorMessage);
+
+        setIsSubmitting(false);
+        // Log the full error for debugging
+        // console.error("Authentication Error:", authError);
+      } else {
+        const errorMessage = "An unexpected error occurred";
+        setFormError(errorMessage);
+
+        toast.error(errorMessage);
+
+        setIsSubmitting(false);
+        // Log the full error for debugging
+        // console.error(error);
+      }
     }
   }
 
@@ -133,18 +196,43 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const isSignIn = type === "sign-in";
 
   return (
-    <div className="card-border lg:min-w-[566px]">
-      <div className="flex flex-col gap-4 card py-14 px-10">
-        <div className="flex flex-row gap-2 justify-center">
-          <Image src="/logo.svg" alt="Logo" width={38} height={32} />
-          <h2 className="text-primary-100">Prepme</h2>
+    <div className="w-full max-w-md mx-auto">
+      <div
+        className={cn(
+          "flex flex-col space-y-6 p-8 bg-gradient-to-b from-transparent to-sky-500/20 backdrop-blur-3xl rounded-xl shadow-sm border border-gray-100/20",
+          isSubmitting && "opacity-50 pointer-events-none"
+        )}
+      >
+        <div className="flex flex-col items-center space-y-2">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/logo.svg"
+              alt="Logo"
+              width={28}
+              height={24}
+              className="h-6 w-auto"
+            />
+            <h2 className="text-xl font-semibold text-white">Prepme</h2>
+          </div>
+          <p className="text-sm text-gray-500">
+            Practice job interviews with AI
+          </p>
         </div>
-        <h3 className="text-center text-sm">Practice job interview with AI</h3>
+
+        {/* Display form-level error message */}
+        {formError && (
+          <div
+            className="border border-red-500 backdrop-blur-3xl text-red-600 text-[13px] font-mona-sans flex justify-center px-4 py-1 rounded-md"
+            role="alert"
+          >
+            {formError}
+          </div>
+        )}
 
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="w-full space-y-6 mt-4 form"
+            className="w-full space-y-3"
           >
             {!isSignIn && (
               <FormField
@@ -167,22 +255,26 @@ const AuthForm = ({ type }: { type: FormType }) => {
               label="Password"
               type="password"
               placeholder="Your Password"
+              showStrengthMeter={!isSignIn}
             />
-            <Button type="submit" className="btn">
+            <Button
+              type="submit"
+              className="w-full mt-2 cursor-pointer"
+              disabled={isSubmitting}
+            >
               {isSignIn ? "Sign In" : "Create An Account"}
             </Button>
           </form>
         </Form>
-        <p className="text-center">
-          {" "}
-          {isSignIn ? "Don't have an account?" : "Already have and account?"}
+        <div className="text-center text-sm text-gray-500">
+          {isSignIn ? "Don't have an account?" : "Already have an account?"}
           <Link
             href={isSignIn ? "/sign-up" : "/sign-in"}
-            className="font-bold text-user-primary ml-1"
+            className="font-medium text-primary ml-1 hover:underline transition-colors"
           >
             {!isSignIn ? "Sign In" : "Sign Up"}
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
