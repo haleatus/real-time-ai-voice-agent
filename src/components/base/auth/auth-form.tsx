@@ -238,8 +238,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
               label="Password"
               type="password"
               placeholder="Your Password"
+              showStrengthMeter={!isSignIn}
             />
-            <Button type="submit" className="w-full mt-2">
+            <Button type="submit" className="w-full mt-2 cursor-pointer">
               {isSignIn ? "Sign In" : "Create An Account"}
             </Button>
           </form>
