@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import type React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -14,9 +14,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 
 // Types and icons
-import { Star, Calendar, Sparkles, TrendingUp, Target } from "lucide-react";
+import {
+  Star,
+  Calendar,
+  Sparkles,
+  TrendingUp,
+  Target,
+  ArrowLeft,
+  RefreshCw,
+} from "lucide-react";
 import dayjs from "dayjs";
 
 // Prop types for the component
@@ -26,170 +35,250 @@ interface FeedbackComponentProps {
   feedback: Feedback | null;
 }
 
+// Define the Interview and Feedback types
+interface Interview {
+  role: string;
+  // Add other properties of the Interview type here
+}
+
+interface Feedback {
+  createdAt: string;
+  totalScore: number;
+  finalAssessment: string;
+  categoryScores: { name: string; score: number; comment: string }[];
+  strengths: string[];
+  areasForImprovement: string[];
+  // Add other properties of the Feedback type here
+}
+
 const FeedbackComponent: React.FC<FeedbackComponentProps> = ({
   id,
   interview,
   feedback,
 }) => {
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" },
+    },
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="container mx-auto px-2 py-4"
-    >
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-3xl font-bold">
-              Interview Feedback -{" "}
-              <span className="text-primary">{interview.role}</span>
-            </CardTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline">
-                    <Star className="mr-2 h-4 w-4" />
-                    Overall Score
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>Your total performance score</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </CardHeader>
+    <div className="container mx-auto px-4 py-8 bg-gradient-to-b from-background to-background/50 min-h-screen">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        <Card className="w-full max-w-4xl mx-auto border-none shadow-lg overflow-hidden">
+          <CardHeader className="bg-primary/5 pb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <CardTitle className="text-2xl md:text-3xl font-bold">
+                  <span className="text-primary capitalize">
+                    {interview.role}
+                  </span>{" "}
+                  Interview Feedback
+                </CardTitle>
+                <p className="text-muted-foreground mt-1 text-sm flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {feedback?.createdAt
+                    ? dayjs(feedback.createdAt).format("MMM D, YYYY h:mm A")
+                    : "N/A"}
+                </p>
+              </motion.div>
 
-        <CardContent>
-          {/* Header Info */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex justify-between items-center mb-6 p-4 bg-muted rounded-lg"
-          >
-            <div className="flex items-center space-x-4">
-              <Star className="text-yellow-500" />
-              <span className="text-xl font-semibold">
-                Overall Score:{" "}
-                <span className="text-primary">{feedback?.totalScore}/100</span>
-              </span>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="flex items-center bg-background rounded-full px-4 py-2 shadow-sm"
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                        </div>
+                        <span className="font-bold text-xl">
+                          {feedback?.totalScore || 0}
+                        </span>
+                        <span className="text-muted-foreground text-sm">
+                          /100
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Your overall performance score</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </motion.div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Calendar className="text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {feedback?.createdAt
-                  ? dayjs(feedback.createdAt).format("MMM D, YYYY h:mm A")
-                  : "N/A"}
-              </span>
-            </div>
-          </motion.div>
+          </CardHeader>
 
-          {/* Final Assessment */}
-          <motion.section
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-6"
-          >
-            <h2 className="text-xl font-semibold mb-3 flex items-center">
-              <Sparkles className="mr-2 text-primary" />
-              Final Assessment
-            </h2>
-            <p className="text-muted-foreground">{feedback?.finalAssessment}</p>
-          </motion.section>
+          <CardContent className="p-6">
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="space-y-8"
+            >
+              {/* Final Assessment */}
+              <motion.section variants={itemVariants} className="space-y-3">
+                <h2 className="text-xl font-semibold flex items-center">
+                  <Sparkles className="mr-2 h-5 w-5 text-primary" />
+                  Final Assessment
+                </h2>
+                <Card className="bg-primary/5 border-none p-4">
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feedback?.finalAssessment}
+                  </p>
+                </Card>
+              </motion.section>
 
-          {/* Interview Breakdown */}
-          <motion.section
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mb-6"
-          >
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <Target className="mr-2 text-primary" />
-              Interview Breakdown
-            </h2>
-            {feedback?.categoryScores?.map(
-              (
-                category: { name: string; score: number; comment: string },
-                index: number
-              ) => (
-                <div
-                  key={index}
-                  className="mb-4 p-3 bg-background border rounded-lg"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold">
-                      {index + 1}. {category.name}
-                    </span>
-                    <Badge variant="secondary">{category.score}/100</Badge>
-                  </div>
-                  <p className="text-muted-foreground">{category.comment}</p>
+              {/* Interview Breakdown */}
+              <motion.section variants={itemVariants} className="space-y-4">
+                <h2 className="text-xl font-semibold flex items-center">
+                  <Target className="mr-2 h-5 w-5 text-primary" />
+                  Interview Breakdown
+                </h2>
+
+                <div className="space-y-4">
+                  {feedback?.categoryScores?.map(
+                    (
+                      category: {
+                        name: string;
+                        score: number;
+                        comment: string;
+                      },
+                      index: number
+                    ) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.1 * index }}
+                        className="p-4 bg-card border border-border/50 rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-3">
+                          <span className="font-medium text-lg">
+                            {category.name}
+                          </span>
+                          <Badge variant="secondary" className="px-3 py-1">
+                            {category.score}/100
+                          </Badge>
+                        </div>
+                        <Progress
+                          value={category.score}
+                          className="h-1.5 mb-3"
+                        />
+                        <p className="text-muted-foreground text-sm">
+                          {category.comment}
+                        </p>
+                      </motion.div>
+                    )
+                  )}
                 </div>
-              )
-            )}
-          </motion.section>
+              </motion.section>
 
-          {/* Strengths and Improvements */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <TrendingUp className="mr-2 text-green-500" />
-                Strengths
-              </h3>
-              <ul className="space-y-2 list-disc pl-5">
-                {feedback?.strengths?.map((strength, index) => (
-                  <li key={index} className="text-muted-foreground">
-                    {strength}
-                  </li>
-                ))}
-              </ul>
-            </motion.section>
+              {/* Strengths and Improvements */}
+              <motion.div
+                variants={itemVariants}
+                className="grid md:grid-cols-2 gap-6"
+              >
+                <section className="space-y-3">
+                  <h3 className="text-lg font-semibold flex items-center">
+                    <TrendingUp className="mr-2 h-5 w-5 text-emerald-500" />
+                    Strengths
+                  </h3>
+                  <Card className="bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/20 p-4">
+                    <ul className="space-y-2">
+                      {feedback?.strengths?.map((strength, index) => (
+                        <motion.li
+                          key={index}
+                          initial={{ opacity: 0, x: -5 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 * index }}
+                          className="flex items-start gap-2 text-muted-foreground"
+                        >
+                          <span className="text-emerald-500 mt-1">•</span>
+                          <span>{strength}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </Card>
+                </section>
 
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-            >
-              <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <TrendingUp className="mr-2 text-red-500 rotate-180" />
-                Areas for Improvement
-              </h3>
-              <ul className="space-y-2 list-disc pl-5">
-                {feedback?.areasForImprovement?.map((area, index) => (
-                  <li key={index} className="text-muted-foreground">
-                    {area}
-                  </li>
-                ))}
-              </ul>
-            </motion.section>
-          </div>
+                <section className="space-y-3">
+                  <h3 className="text-lg font-semibold flex items-center">
+                    <TrendingUp className="mr-2 h-5 w-5 text-rose-500 rotate-180" />
+                    Areas for Improvement
+                  </h3>
+                  <Card className="bg-rose-50/30 dark:bg-rose-950/10 border-rose-100 dark:border-rose-900/20 p-4">
+                    <ul className="space-y-2">
+                      {feedback?.areasForImprovement?.map((area, index) => (
+                        <motion.li
+                          key={index}
+                          initial={{ opacity: 0, x: -5 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 * index }}
+                          className="flex items-start gap-2 text-muted-foreground"
+                        >
+                          <span className="text-rose-500 mt-1">•</span>
+                          <span>{area}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </Card>
+                </section>
+              </motion.div>
 
-          {/* Action Buttons */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="flex space-x-4 mt-8"
-          >
-            <Button variant="secondary" className="flex-1">
-              <Link href="/" className="w-full text-center">
-                Back to Dashboard
-              </Link>
-            </Button>
-            <Button className="flex-1">
-              <Link href={`/interview/${id}`} className="w-full text-center">
-                Retake Interview
-              </Link>
-            </Button>
-          </motion.div>
-        </CardContent>
-      </Card>
-    </motion.div>
+              {/* Action Buttons */}
+              <motion.div
+                variants={itemVariants}
+                className="flex flex-col sm:flex-row gap-3 pt-4"
+              >
+                <Button variant="outline" className="flex-1 gap-2 group">
+                  <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+                  <Link href="/" className="w-full text-center">
+                    Back to Dashboard
+                  </Link>
+                </Button>
+                <Button className="flex-1 gap-2 group">
+                  <Link
+                    href={`/interview/${id}`}
+                    className="w-full text-center flex items-center justify-center gap-2"
+                  >
+                    Retake Interview
+                    <RefreshCw className="h-4 w-4 group-hover:rotate-90 transition-transform" />
+                  </Link>
+                </Button>
+              </motion.div>
+            </motion.div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   );
 };
 
