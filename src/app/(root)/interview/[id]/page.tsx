@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 
 // Icons
 import { Calendar, ExternalLinkIcon } from "lucide-react";
+import { DownloadQuestionsButton } from "@/components/base/interview/download-interview-questions";
 
 /**
  * Interview detail page
@@ -91,13 +92,21 @@ const InterviewDetailPage = async ({ params }: RouteParams) => {
                       {new Date(feedback.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <Link
-                    href={`/interview/${id}/feedback`}
-                    className="text-sm mt-1 text-sky-500 inline-flex items-center hover:underline"
-                  >
-                    View Feedback
-                    <ExternalLinkIcon className="ml-1 h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {/* Download Questions Button - Only visible when feedback exists */}
+                    <DownloadQuestionsButton
+                      questions={interview.questions}
+                      interviewRole={interview.role}
+                    />
+
+                    <Link
+                      href={`/interview/${id}/feedback`}
+                      className="text-sm text-sky-500 inline-flex items-center hover:underline"
+                    >
+                      View Feedback
+                      <ExternalLinkIcon className="ml-1 h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -113,6 +122,8 @@ const InterviewDetailPage = async ({ params }: RouteParams) => {
         questions={interview.questions}
         feedbackId={feedback?.id}
       />
+
+      <div className="mt-8 w-full h-[1px] bg-dark-200/5" />
     </>
   );
 };
